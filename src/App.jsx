@@ -328,7 +328,7 @@ export default function App(){
       const res=await fetch("/api/claude",{method:"POST",headers:{"Content-Type":"application/json"},
         body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:600,
           system:`You are a fashion stylist. Select items from the available list to create a cohesive outfit, picking one item per category. Consider color harmony, style consistency and occasion. Return ONLY valid JSON: {"selectedIds":[array of numeric item ids],"reasoning":"2-3 sentence style note explaining why these pieces work together"}`,
-          messages:[{role:"user",content:`Create a cohesive outfit. Categories needed: ${genCats.join(", ")}. Already locked in (must keep): ${JSON.stringify(locked.map(i=>({id:i.id,name:i.name,color:i.color||"",category:i.category})))}. Choose from available: ${JSON.stringify(avail.map(i=>({id:i.id,name:i.name,brand:i.brand||"",color:i.color||"",category:i.category,description:i.description||""}}))}`}]})});
+          messages:[{role:"user",content:`Create a cohesive outfit. Categories needed: ${genCats.join(", ")}. Already locked in (must keep): ${JSON.stringify(locked.map(i=>({id:i.id,name:i.name,color:i.color||"",category:i.category})))}. Choose from available: ${JSON.stringify(avail.map(i=>({id:i.id,name:i.name,brand:i.brand||"",color:i.color||"",category:i.category,description:i.description||""})))}`}]})});
       if(!res.ok) throw new Error(`API ${res.status}`);
       const data=await res.json();
       const text=data.content.filter(b=>b.type==="text").map(b=>b.text).join("");
