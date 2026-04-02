@@ -124,6 +124,7 @@ export default function App(){
   const[seasons,setSeasons]=useState(DEFAULT_SEASONS);
   const[outfits,setOutfits]=useState([]);
   const[profilePic,setProfilePic]=useState(null);
+  const[displayName,setDisplayName]=useState("");
   const[darkMode,setDarkMode]=useState(false);
   const T=darkMode?DARK:LIGHT;
 
@@ -199,6 +200,7 @@ export default function App(){
     const rw=ls.get(wkey(u));setWishlist(rw?JSON.parse(rw.value):[]);
     const ro=ls.get(okey(u));setOutfits(ro?JSON.parse(ro.value):[]);
     const rp=ls.get(pkey(u));setProfilePic(rp?rp.value:null);
+    const dn=ls.get(`wd-dn-${u}`);setDisplayName(dn?dn.value:u.charAt(0).toUpperCase()+u.slice(1));
     const dm=ls.get(`wd-dark-${u}`);setDarkMode(dm?.value==="1");
     setUser(u);localStorage.setItem("wd-session",u);
   };
@@ -226,6 +228,7 @@ export default function App(){
   const saveWishlist=v=>{setWishlist(v);ls.set(wkey(user),JSON.stringify(v));};
   const saveOutfits =v=>{setOutfits(v); ls.set(okey(user),JSON.stringify(v));};
   const addSeason   =s=>{if(!s||seasons.includes(s))return;saveSeasons([...seasons,s]);};
+  const saveDisplayName=n=>{const cap=n.charAt(0).toUpperCase()+n.slice(1);setDisplayName(cap);ls.set(`wd-dn-${user}`,cap);};
   const toggleDark  =()=>{const d=!darkMode;setDarkMode(d);ls.set(`wd-dark-${user}`,d?"1":"0");};
 
   // Drag & Drop
@@ -416,7 +419,7 @@ export default function App(){
             ?<img src={profilePic} style={{width:30,height:30,borderRadius:"50%",objectFit:"cover",flexShrink:0}} alt=""/>
             :<div style={{width:30,height:30,borderRadius:"50%",background:"#1a1a1a",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,color:"#fff",flexShrink:0}}>{user[0].toUpperCase()}</div>
           }
-          <span style={{fontSize:15,fontWeight:700,color:T.text}}>Wardrobe</span>
+          <span style={{fontSize:15,fontWeight:700,color:T.text}}>{displayName}'s Wardrobe</span>
         </div>
         <div style={{display:"flex",gap:3,alignItems:"center",flexWrap:"wrap"}}>
           {navs.map(([v,l])=><button key={v} style={nb(view===v)} onClick={()=>setView(v)}>{l}</button>)}
@@ -807,8 +810,13 @@ export default function App(){
                 </div>
               </div>
             </div>
-            {changingUser&&<div style={{borderTop:`1px solid ${T.border}`,paddingTop:14}}>
-              <div style={{fontSize:12,fontWeight:600,color:T.sub,marginBottom:6}}>New Username</div>
+            {changingUser&&<div style={{borderTop:`1px solid ${T.border}`,paddingTop:14,marginBottom:10}}>
+              <div style={{fontSize:12,fontWeight:600,color:T.sub,marginBottom:6}}>Display Name <span style={{color:T.muted,fontWeight:400}}>(shown on your wardrobe)</span></div>
+              <div style={{display:"flex",gap:8,marginBottom:12}}>
+                <input style={{...inp,flex:1}} value={displayName} onChange={e=>setDisplayName(e.target.value)} placeholder="e.g. Olga"/>
+                <button style={pb} onClick={()=>saveDisplayName(displayName)}>Save</button>
+              </div>
+              <div style={{fontSize:12,fontWeight:600,color:T.sub,marginBottom:6}}>Username <span style={{color:T.muted,fontWeight:400}}>(used to log in)</span></div>
               <div style={{display:"flex",gap:8}}><input style={{...inp,flex:1}} value={newUsername} onChange={e=>setNewUsername(e.target.value)} placeholder="new username" onKeyDown={e=>e.key==="Enter"&&doChangeUsername()}/><button style={pb} onClick={doChangeUsername}>Save</button><button style={sb} onClick={()=>{setChangingUser(false);setNewUsername("");}}>Cancel</button></div>
             </div>}
           </div>
