@@ -363,7 +363,7 @@ export default function App(){
     </div>
   );
 
-  const navs=[["grid","Directory"],["wishlist","✨ Wishlist"],["outfits","👗 Outfits"],["add","+ Add"],["manage","Categories"],["profile","Profile"]];
+  const navs=[["add","+ Add Item"],["grid","Outfit Directory"],["wishlist","✨ Wishlist"],["outfits","👗 Outfits"],["manage","Categories"],["profile","Your Profile"]];
 
   return(
     <div style={{fontFamily:"'Inter',sans-serif",minHeight:"100vh",background:T.bg,color:T.text}}>
