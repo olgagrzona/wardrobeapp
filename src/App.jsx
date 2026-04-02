@@ -127,7 +127,7 @@ export default function App(){
   const[darkMode,setDarkMode]=useState(false);
   const T=darkMode?DARK:LIGHT;
 
-  const[view,setView]=useState("grid");
+  const[view,setView]=useState("home");
   const[fCat,setFCat]=useState("All");
   const[fBrand,setFBrand]=useState("All");
   const[fSeason,setFSeason]=useState("All");
@@ -405,7 +405,7 @@ export default function App(){
     </div>
   );
 
-  const navs=[["add","+ Add Item"],["grid","Outfit Directory"],["wishlist","✨ Wishlist"],["outfits","👗 Outfits"],["manage","Categories"],["profile","Your Profile"]];
+  const navs=[["home","My Wardrobe"],["add","+ Add Item"],["grid","Outfit Directory"],["wishlist","✨ Wishlist"],["outfits","👗 Outfits"],["manage","Categories"],["profile","Your Profile"]];
 
   return(
     <div style={{fontFamily:"'Inter',sans-serif",minHeight:"100vh",background:T.bg,color:T.text}}>
@@ -427,6 +427,66 @@ export default function App(){
       </div>
 
       <div style={{maxWidth:1100,margin:"0 auto",padding:"18px 14px"}}>
+
+        {/* ── HOME ── */}
+        {view==="home"&&<>
+          <div style={{maxWidth:680,margin:"0 auto"}}>
+            {/* Welcome */}
+            <div style={{display:"flex",alignItems:"center",gap:16,marginBottom:28}}>
+              {profilePic
+                ?<img src={profilePic} style={{width:56,height:56,borderRadius:"50%",objectFit:"cover",flexShrink:0}} alt=""/>
+                :<div style={{width:56,height:56,borderRadius:"50%",background:"#1a1a1a",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,color:"#fff",flexShrink:0}}>{user[0].toUpperCase()}</div>
+              }
+              <div>
+                <div style={{fontSize:22,fontWeight:800,color:T.text}}>Hi, {user} 👋</div>
+                <div style={{fontSize:14,color:T.sub,marginTop:2}}>Welcome to your personal wardrobe assistant.</div>
+              </div>
+            </div>
+
+            {/* Stats row */}
+            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:28}}>
+              {[
+                {icon:"👗",label:"Items",value:items.length,action:"grid"},
+                {icon:"✨",label:"Wishlist",value:wishlist.length,action:"wishlist"},
+                {icon:"🎨",label:"Outfits",value:outfits.length,action:"outfits"},
+              ].map(({icon,label,value,action})=>(
+                <div key={label} onClick={()=>setView(action)} style={{background:T.surface,borderRadius:12,padding:"16px 14px",border:`1px solid ${T.border}`,cursor:"pointer",textAlign:"center",transition:"all 0.15s"}}>
+                  <div style={{fontSize:26,marginBottom:4}}>{icon}</div>
+                  <div style={{fontSize:22,fontWeight:800,color:T.text}}>{value}</div>
+                  <div style={{fontSize:12,color:T.muted}}>{label}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Feature cards */}
+            <div style={{fontSize:13,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",color:T.muted,marginBottom:12}}>What you can do</div>
+            <div style={{display:"flex",flexDirection:"column",gap:10}}>
+              {[
+                {icon:"👗",title:"Outfit Directory",desc:"Browse your wardrobe in an Instagram-style gallery. Drag and drop to reorder, filter by category, brand or season.",action:"grid",color:"#f0f4ff"},
+                {icon:"➕",title:"Add Items",desc:"Add clothes by pasting a product URL and letting AI fetch the details automatically, or add them manually with photos.",action:"add",color:"#f0faf4"},
+                {icon:"✨",title:"Wishlist",desc:"Save items you want to buy. Track RRP vs current price to spot savings, and move items to your wardrobe once purchased.",action:"wishlist",color:"#fdf0ef"},
+                {icon:"🎨",title:"Outfit Generator",desc:"Let AI build outfits from your wardrobe. Lock pieces you love, regenerate the rest, and save your favourite combinations.",action:"outfits",color:"#f5f0ff"},
+                {icon:"📋",title:"Outfit History",desc:"All your saved outfits in one place. See the total cost, edit or delete them anytime.",action:"outfits",color:"#fff8f0"},
+              ].map(({icon,title,desc,action,color})=>(
+                <div key={title} onClick={()=>setView(action)} style={{background:T.surface,borderRadius:12,padding:"16px 18px",border:`1px solid ${T.border}`,cursor:"pointer",display:"flex",gap:14,alignItems:"flex-start"}}>
+                  <div style={{width:40,height:40,borderRadius:10,background:color,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>{icon}</div>
+                  <div>
+                    <div style={{fontSize:14,fontWeight:700,color:T.text,marginBottom:3}}>{title}</div>
+                    <div style={{fontSize:13,color:T.sub,lineHeight:1.5}}>{desc}</div>
+                  </div>
+                  <div style={{color:T.muted,fontSize:18,marginLeft:"auto",alignSelf:"center"}}>›</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Wardrobe worth if items exist */}
+            {items.length>0&&<div style={{background:"#1a1a1a",borderRadius:12,padding:20,marginTop:16,color:"#fff"}}>
+              <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",opacity:0.5,marginBottom:4}}>Total Wardrobe Value</div>
+              <div style={{fontSize:30,fontWeight:800}}>{S}{totalWorth.toFixed(2)}</div>
+              {totalWorth-totalPaid>0&&<div style={{fontSize:12,opacity:0.5,marginTop:3}}>Saved {S}{(totalWorth-totalPaid).toFixed(2)} vs listed prices</div>}
+            </div>}
+          </div>
+        </>}
 
         {/* ── INSTAGRAM GRID ── */}
         {view==="grid"&&<>
