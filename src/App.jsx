@@ -160,6 +160,14 @@ export default function App(){
   const[outfitNotes,setOutfitNotes]=useState("");
   const[editOutfitId,setEditOutfitId]=useState(null);
   const[editOutfitForm,setEditOutfitForm]=useState({});
+  const[genCats,setGenCats]=useState([]);
+  const[genResult,setGenResult]=useState([]);
+  const[genLocked,setGenLocked]=useState([]);
+  const[genReasoning,setGenReasoning]=useState("");
+  const[genLoading,setGenLoading]=useState(false);
+  const[genErr,setGenErr]=useState("");
+  const[genName,setGenName]=useState("");
+  const[genStep,setGenStep]=useState("setup");
 
   // Modals
   const[expanded,setExpanded]=useState(null);
@@ -305,6 +313,40 @@ export default function App(){
     const totalVal=its.reduce((s,i)=>s+pp(i.price),0);
     saveOutfits(outfits.map(o=>o.id===editOutfitId?{...o,...editOutfitForm,totalPaid,totalVal}:o));
     setEditOutfitId(null);setOutfitTab("history");
+  };
+
+  // Outfit generator
+  const toggleGenCat=c=>setGenCats(s=>s.includes(c)?s.filter(x=>x!==c):[...s,c]);
+  const toggleLock=id=>setGenLocked(s=>s.includes(id)?s.filter(x=>x!==id):[...s,id]);
+  const generateOutfit=async()=>{
+    if(genCats.length===0){setGenErr("Select at least one category.");return;}
+    const avail=items.filter(i=>genCats.includes(i.category)&&!genLocked.includes(i.id));
+    if(avail.length===0){setGenErr("No unlocked items in selected categories.");return;}
+    setGenLoading(true);setGenErr("");
+    const locked=items.filter(i=>genLocked.includes(i.id));
+    try{
+      const res=await fetch("/api/claude",{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:600,
+          system:`You are a fashion stylist. Select items from the available list to create a cohesive outfit, picking one item per category. Consider color harmony, style consistency and occasion. Return ONLY valid JSON: {"selectedIds":[array of numeric item ids],"reasoning":"2-3 sentence style note explaining why these pieces work together"}`,
+          messages:[{role:"user",content:`Create a cohesive outfit. Categories needed: ${genCats.join(", ")}. Already locked in (must keep): ${JSON.stringify(locked.map(i=>({id:i.id,name:i.name,color:i.color||"",category:i.category})))}. Choose from available: ${JSON.stringify(avail.map(i=>({id:i.id,name:i.name,brand:i.brand||"",color:i.color||"",category:i.category,description:i.description||""}}))}`}]})});
+      if(!res.ok) throw new Error(`API ${res.status}`);
+      const data=await res.json();
+      const text=data.content.filter(b=>b.type==="text").map(b=>b.text).join("");
+      const clean=text.replace(/```json|```/g,"").trim();
+      const parsed=JSON.parse(clean.slice(clean.indexOf("{"),clean.lastIndexOf("}")+1));
+      setGenResult([...genLocked,...(parsed.selectedIds||[])]);
+      setGenReasoning(parsed.reasoning||"");
+      setGenStep("result");
+    }catch(e){setGenErr(`Generation failed: ${e.message}`);}
+    finally{setGenLoading(false);}
+  };
+  const saveGenOutfit=()=>{
+    if(!genName.trim()||genResult.length===0) return;
+    const its=genResult.map(id=>items.find(i=>i.id===id)).filter(Boolean);
+    const totalPaid=its.reduce((s,i)=>s+pp(i.paidPrice||i.price),0);
+    const totalVal=its.reduce((s,i)=>s+pp(i.price),0);
+    saveOutfits([{id:Date.now(),name:genName,notes:"AI Generated",itemIds:[...genResult],totalPaid,totalVal,createdAt:new Date().toISOString()},...outfits]);
+    setGenResult([]);setGenLocked([]);setGenReasoning("");setGenName("");setGenStep("setup");setOutfitTab("history");
   };
 
   // Change username
@@ -485,9 +527,62 @@ export default function App(){
 
         {/* ── OUTFITS ── */}
         {view==="outfits"&&<>
-          <div style={{display:"flex",background:T.badge,borderRadius:10,padding:3,marginBottom:20,maxWidth:400}}>
-            {[["create","✨ Create Outfit"],["history","📋 Outfit History"]].map(([t,l])=><button key={t} style={tabS(outfitTab===t)} onClick={()=>setOutfitTab(t)}>{l}</button>)}
+          <div style={{display:"flex",background:T.badge,borderRadius:10,padding:3,marginBottom:20,maxWidth:500}}>
+            {[["generate","✨ Generate"],["create","🎨 Create"],["history","📋 History"]].map(([t,l])=><button key={t} style={tabS(outfitTab===t)} onClick={()=>setOutfitTab(t)}>{l}</button>)}
           </div>
+
+          {/* GENERATE */}
+          {outfitTab==="generate"&&<>
+            {items.length===0?<div style={{textAlign:"center",padding:"40px 20px",color:T.muted}}><div style={{fontSize:36,marginBottom:8}}>👗</div><div style={{fontSize:14,color:T.sub}}>Add items to your wardrobe first</div></div>:<>
+              {genStep==="setup"&&<div style={{maxWidth:560}}>
+                <div style={{fontSize:14,color:T.sub,marginBottom:14}}>Select which categories to build your outfit from, then let AI pick the best combination from your wardrobe.</div>
+                <div style={{marginBottom:20}}>
+                  <div style={{fontSize:12,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",color:T.muted,marginBottom:8}}>Categories</div>
+                  {cats.length===0?<div style={{color:T.muted,fontSize:13}}>No categories yet.</div>:(
+                    <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>{cats.map(c=><button key={c} style={chip(genCats.includes(c))} onClick={()=>toggleGenCat(c)}>{c} <span style={{opacity:0.6,fontSize:11}}>({items.filter(i=>i.category===c).length})</span></button>)}</div>
+                  )}
+                </div>
+                {genErr&&<div style={err}>{genErr}</div>}
+                <button style={{...pb,opacity:genCats.length===0||genLoading?0.4:1,display:"flex",alignItems:"center",gap:8,justifyContent:"center",width:"100%"}} onClick={generateOutfit} disabled={genCats.length===0||genLoading}>
+                  {genLoading?<><span style={{fontSize:18}}>⏳</span> Generating your outfit…</>:<><span style={{fontSize:18}}>✨</span> Generate Outfit</>}
+                </button>
+              </div>}
+
+              {genStep==="result"&&<div style={{maxWidth:700}}>
+                <div style={{background:"linear-gradient(135deg,#667eea,#764ba2)",borderRadius:12,padding:18,marginBottom:20,color:"#fff"}}>
+                  <div style={{fontSize:11,fontWeight:700,letterSpacing:"0.08em",marginBottom:6,opacity:0.8}}>✨ STYLIST NOTE</div>
+                  <div style={{fontSize:14,lineHeight:1.6}}>{genReasoning}</div>
+                </div>
+                <div style={{fontSize:12,color:T.muted,marginBottom:10}}>🔒 Lock items you want to keep, then regenerate for new suggestions on the rest</div>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:12,marginBottom:20}}>
+                  {genResult.map(id=>{
+                    const item=items.find(i=>i.id===id);if(!item)return null;
+                    const locked=genLocked.includes(id);
+                    return(<div key={id} style={{borderRadius:10,overflow:"hidden",border:`2px solid ${locked?"#6c63ff":T.border}`,position:"relative",background:T.surface}}>
+                      <Img src={item.imageUrl} alt={item.name} style={{width:"100%",height:150,objectFit:"cover",display:"block"}}/>
+                      <button onClick={()=>toggleLock(id)} title={locked?"Unlock":"Lock"} style={{position:"absolute",top:6,right:6,background:locked?"#6c63ff":"rgba(0,0,0,0.5)",border:"none",borderRadius:"50%",width:28,height:28,cursor:"pointer",color:"#fff",fontSize:14,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                        {locked?"🔒":"🔓"}
+                      </button>
+                      <div style={{padding:"8px 10px"}}>
+                        <div style={{fontSize:12,fontWeight:600,color:T.text,lineHeight:1.3,marginBottom:2}}>{item.name}</div>
+                        <div style={{fontSize:10,color:T.muted}}>{item.category}{item.color?` · ${item.color}`:""}</div>
+                        {(item.paidPrice||item.price)&&<div style={{fontSize:11,fontWeight:700,color:"#2d6a4f",marginTop:2}}>{item.paidPrice||item.price}</div>}
+                      </div>
+                    </div>);
+                  })}
+                </div>
+                <div style={{background:T.surface,borderRadius:12,padding:18,border:`1px solid ${T.border}`}}>
+                  <div style={{fontSize:13,fontWeight:700,color:T.text,marginBottom:12}}>Save this outfit</div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr auto auto",gap:8,alignItems:"start"}}>
+                    <input style={inp} value={genName} onChange={e=>setGenName(e.target.value)} placeholder="Outfit name e.g. Smart Casual…" onKeyDown={e=>e.key==="Enter"&&saveGenOutfit()}/>
+                    <button style={{...pb,whiteSpace:"nowrap",opacity:!genName.trim()?0.4:1}} onClick={saveGenOutfit} disabled={!genName.trim()}>💾 Save</button>
+                    <button style={{...sb,whiteSpace:"nowrap"}} onClick={generateOutfit} disabled={genLoading}>{genLoading?"…":"↻ Regenerate"}</button>
+                  </div>
+                  <button style={{...sb,marginTop:10,fontSize:12}} onClick={()=>{setGenStep("setup");setGenResult([]);setGenLocked([]);setGenReasoning("");}}>← Change Categories</button>
+                </div>
+              </div>}
+            </>}
+          </>}
 
           {/* CREATE */}
           {outfitTab==="create"&&<>
